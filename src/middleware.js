@@ -82,8 +82,22 @@ function obtainPermissionsKoaMiddleware() {
   };
 }
 
+function obtainUserKoaMiddleware(required = true) {
+  return async (ctx, next) => {
+    try {
+      ctx.state.user = JSON.parse(ctx.request.header.user);
+    } catch (err) {
+      if (required) {
+        throw new UnauthorizedException('Not authorized');
+      }
+    }
+    await next();
+  };
+}
+
 module.exports = {
   koa: {
+    obtainUser: obtainUserKoaMiddleware,
     checkPermissions: checkPermissionsKoaMiddleware,
     obtainPermissions: obtainPermissionsKoaMiddleware,
     checkPermissionsWithRequestParams: checkPermissionsWithRequestParamsKoaMiddleware
