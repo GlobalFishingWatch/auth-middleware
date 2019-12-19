@@ -60,7 +60,6 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
     const id = ctx.state.user.id;
     const type = ctx.state.user.type;
     const gatewayURL = getGatewayURLKoa(ctx);
-    console.log('Gatewayurl', gatewayURL);
     const newPerm = permissions.map(p => {
       if (p.valueParam) {
         return { ...p, value: ctx.params[p.valueParam] };
