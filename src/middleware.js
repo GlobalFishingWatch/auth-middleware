@@ -10,7 +10,7 @@ async function checkPermissions(gatewayURL, type, id, permissions) {
   for (let i = 0; i < permissions.length; i++) {
     try {
       const permission = permissions[i];
-      const url = `${gatewayURL}/v2/acl/${type}/${id}/has/${permission.action}/${permission.type}/${permission.value}`;
+      const url = `${gatewayURL}/auth/acl/${type}/${id}/has/${permission.action}/${permission.type}/${permission.value}`;
       const options = {
         uri: url,
         headers: {
@@ -31,7 +31,7 @@ async function checkPermissions(gatewayURL, type, id, permissions) {
 
 async function getPermissions(gatewayURL, type, id) {
   try {
-    const url = `${gatewayURL}/v2/acl/permissions/${type}/${id}`;
+    const url = `${gatewayURL}/auth/acl/permissions/${type}/${id}`;
     const options = {
       uri: url,
       headers: {
