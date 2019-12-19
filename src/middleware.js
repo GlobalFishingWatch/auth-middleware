@@ -14,9 +14,9 @@ async function checkPermissions(gatewayURL, type, id, permissions) {
       const options = {
         uri: url,
         headers: {
-          Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
+          Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
         },
-        json: true,
+        json: true
       };
       await rp(options);
       has = true;
@@ -35,9 +35,9 @@ async function getPermissions(gatewayURL, type, id) {
     const options = {
       uri: url,
       headers: {
-        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
+        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
       },
-      json: true,
+      json: true
     };
     const permissions = await rp(options);
     return permissions;
@@ -71,7 +71,7 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
   };
 }
 
-function obtainPermissionsPermissionsKoaMiddleware() {
+function obtainPermissionsKoaMiddleware() {
   return async (ctx, next) => {
     const id = ctx.state.user.id;
     const type = ctx.state.user.type;
@@ -85,10 +85,10 @@ function obtainPermissionsPermissionsKoaMiddleware() {
 module.exports = {
   koa: {
     checkPermissions: checkPermissionsKoaMiddleware,
-    obtainPermissionsPermissions: obtainPermissionsPermissionsKoaMiddleware,
-    checkPermissionsWithRequestParams: checkPermissionsWithRequestParamsKoaMiddleware,
+    obtainPermissions: obtainPermissionsKoaMiddleware,
+    checkPermissionsWithRequestParams: checkPermissionsWithRequestParamsKoaMiddleware
   },
   errors: {
-    ForbiddenException,
-  },
+    ForbiddenException
+  }
 };
