@@ -96,7 +96,7 @@ function obtainUserKoaMiddleware(required = true) {
 }
 
 async function healthKoa(checkFn = async () => {}) {
-  return async ctx => {
+  return async (ctx, next) => {
     if (ctx.request.path === '/health') {
       try {
         await checkFn();
@@ -106,6 +106,8 @@ async function healthKoa(checkFn = async () => {}) {
         console.error('Error checking health', err);
         ctx.throw(500, 'Internal server error');
       }
+    } else {
+      await next();
     }
   };
 }
