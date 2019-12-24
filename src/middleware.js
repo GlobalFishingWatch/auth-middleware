@@ -95,7 +95,7 @@ function obtainUserKoaMiddleware(required = true) {
   };
 }
 
-async function healthKoa(checkFn = async () => {}) {
+function healthKoa(checkFn = async () => {}) {
   return async (ctx, next) => {
     if (ctx.request.path === '/health') {
       try {
