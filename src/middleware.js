@@ -95,8 +95,24 @@ function obtainUserKoaMiddleware(required = true) {
   };
 }
 
+async function healthKoa(checkFn = async () => {}) {
+  return async ctx => {
+    if (ctx.request.path === '/health') {
+      try {
+        await checkFn();
+        ctx.body = '';
+        ctx.status = 204;
+      } catch (err) {
+        console.error('Error checking health', err);
+        ctx.throw(500, 'Internal server error');
+      }
+    }
+  };
+}
+
 module.exports = {
   koa: {
+    health: healthKoa,
     obtainUser: obtainUserKoaMiddleware,
     checkPermissions: checkPermissionsKoaMiddleware,
     obtainPermissions: obtainPermissionsKoaMiddleware,

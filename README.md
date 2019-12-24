@@ -86,6 +86,12 @@ permission:
 
 ```
 
+### koa.health(checkFn)
+
+Middleware for set health endpoint in the microservice. This middleware responds to /health endpoint. It's possible to pass a function to check more features in the health endpoint.
+
+checkFn: Async function to execute in each call to the endpoint. It's not required.
+
 ## HTTP Errors
 
 ### errors.ForbiddenException - 403
