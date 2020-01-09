@@ -1,4 +1,12 @@
-const { ForbiddenException, UnauthorizedException } = require('./http.error');
+const {
+  HttpException,
+  BadRequestException,
+  UnprocessableEntityException,
+  NotFoundException,
+  ForbiddenException,
+  UnauthorizedException,
+  InternalServerException
+} = require('./http.error');
 const rp = require('request-promise');
 
 function getGatewayURLKoa(ctx) {
@@ -121,6 +129,12 @@ module.exports = {
     checkPermissionsWithRequestParams: checkPermissionsWithRequestParamsKoaMiddleware
   },
   errors: {
-    ForbiddenException
+    HttpException,
+    BadRequestException,
+    UnprocessableEntityException,
+    NotFoundException,
+    ForbiddenException,
+    UnauthorizedException,
+    InternalServerException
   }
 };
