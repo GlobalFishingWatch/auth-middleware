@@ -1,4 +1,4 @@
-const { ForbiddenException } = require('./http.error');
+const { ForbiddenException, UnauthorizedException } = require('./http.error');
 const rp = require('request-promise');
 
 function getGatewayURLKoa(ctx) {
