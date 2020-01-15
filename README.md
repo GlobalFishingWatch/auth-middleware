@@ -97,3 +97,45 @@ checkFn: Async function to execute in each call to the endpoint. It's not requir
 ### errors.ForbiddenException - 403
 
 Object with the info of the unauthorized error. A object of this class is throwed when the user doesn't have permission
+
+## Utils
+
+### utils.checkExistPermissionInList(permissions, {permission})
+
+Return true if the permission is contained in the permissions list.
+
+permissions:
+
+```
+
+[
+  {
+    "type": "<type>", // resource type
+    "value": "<value>", or "valueParam": "<paramName>" // resource value
+    "action": "<action>""// action
+  },
+  ...
+]
+
+```
+
+permission:
+
+```
+
+[
+  {
+    "type": "<type>", // resource type
+    "value": "<value>" // resource value
+    "action": "<action>""// action
+  },
+  ...
+]
+
+```
+
+Example:
+
+const permissions = [{type: 'dataset', value:'carriers:*', action: 'read'}, {type: 'dataset', value:'carriers:*', action: 'write'}]
+
+utils.checkExistPermissionInList(permissions, {type: 'dataset', value:'carriers:dev', action: 'read'})

@@ -136,5 +136,6 @@ module.exports = {
     ForbiddenException,
     UnauthorizedException,
     InternalServerException
-  }
+  },
+  utils: require('./utils')
 };
