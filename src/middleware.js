@@ -7,6 +7,7 @@ const {
   UnauthorizedException,
   InternalServerException
 } = require('./http.error');
+const { StatusCodeError } = require('request-promise/errors');
 const rp = require('request-promise');
 
 function getGatewayURLKoa(ctx) {
@@ -16,14 +17,27 @@ function getGatewayURLKoa(ctx) {
 async function request(ctx, options) {
   const baseUrl = getGatewayURLKoa(ctx);
   const uri = `${baseUrl}${options.uri}`;
-  return rp({
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
-    },
-    uri
-  });
+  try {
+    return rp({
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
+      },
+      uri
+    });
+  } catch (err) {
+    if (err instanceof StatusCodeError) {
+      if (err.statusCode === 404) {
+        throw new NotFoundException('dataset not found');
+      } else if (err.statusCode === 401) {
+        throw new UnauthorizedException('Not authenticated');
+      } else if (err.statusCode === 403) {
+        throw new ForbiddenException('Not authorized');
+      }
+    }
+    throw err;
+  }
 }
 
 async function checkPermissions(gatewayURL, type, id, permissions) {
