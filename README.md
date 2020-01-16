@@ -92,6 +92,13 @@ Middleware for set health endpoint in the microservice. This middleware responds
 
 checkFn: Async function to execute in each call to the endpoint. It's not required.
 
+### koa.request(ctx, options)
+
+Util function to do a request to a internal microservice.
+
+ctx: Koa Context obj. (Required)
+options: The same object that you use in the request-promise library. (Required)
+
 ## HTTP Errors
 
 ### errors.ForbiddenException - 403

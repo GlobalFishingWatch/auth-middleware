@@ -13,6 +13,15 @@ function getGatewayURLKoa(ctx) {
   return ctx.request.headers['x-gateway-url'];
 }
 
+async function request(ctx, options) {
+  const baseUrl = getGatewayURLKoa(ctx);
+  const uri = `${baseUrl}${options.uri}`;
+  return rp({
+    ...options,
+    uri
+  });
+}
+
 async function checkPermissions(gatewayURL, type, id, permissions) {
   let has = false;
   for (let i = 0; i < permissions.length; i++) {
@@ -122,6 +131,7 @@ function healthKoa(checkFn = async () => {}) {
 
 module.exports = {
   koa: {
+    request,
     health: healthKoa,
     obtainUser: obtainUserKoaMiddleware,
     checkPermissions: checkPermissionsKoaMiddleware,
