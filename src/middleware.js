@@ -18,6 +18,10 @@ async function request(ctx, options) {
   const uri = `${baseUrl}${options.uri}`;
   return rp({
     ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
+    },
     uri
   });
 }
