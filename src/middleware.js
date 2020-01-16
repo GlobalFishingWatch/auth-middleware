@@ -18,7 +18,7 @@ async function request(ctx, options) {
   const baseUrl = getGatewayURLKoa(ctx);
   const uri = `${baseUrl}${options.uri}`;
   try {
-    return rp({
+    return await rp({
       ...options,
       headers: {
         ...options.headers,
