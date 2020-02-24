@@ -78,11 +78,27 @@ async function getPermissions(gatewayURL, type, id) {
     throw new ForbiddenException('Not authorized');
   }
 }
+async function getPermissionsAnonymous(gatewayURL, type, id) {
+  try {
+    const url = `${gatewayURL}/auth/acl/permissions/anonymous`;
+    const options = {
+      uri: url,
+      headers: {
+        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
+      },
+      json: true
+    };
+    const permissions = await rp(options);
+    return permissions;
+  } catch (err) {
+    throw new ForbiddenException('Not authorized');
+  }
+}
 
 function checkPermissionsKoaMiddleware(permissions) {
   return async (ctx, next) => {
-    const id = ctx.state.user.id;
-    const type = ctx.state.user.type;
+    const id = ctx.state.user ? ctx.state.user.id : 'anonymous';
+    const type = ctx.state.user ? ctx.state.user.type : 'user';
     const gatewayURL = getGatewayURLKoa(ctx);
     await checkPermissions(gatewayURL, type, id, permissions);
     await next();
@@ -106,11 +122,18 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
 
 function obtainPermissionsKoaMiddleware() {
   return async (ctx, next) => {
-    const id = ctx.state.user.id;
-    const type = ctx.state.user.type;
+    let id, type;
     const gatewayURL = getGatewayURLKoa(ctx);
-    const permissions = await getPermissions(gatewayURL, type, id);
-    ctx.state.permissions = permissions;
+    if (ctx.state.user) {
+      id = ctx.state.user.id;
+      type = ctx.state.user.type;
+      const permissions = await getPermissions(gatewayURL, type, id);
+      ctx.state.permissions = permissions;
+    } else {
+      const permissions = await getPermissionsAnonymous(gatewayURL);
+      ctx.state.permissions = permissions;
+    }
+
     await next();
   };
 }
