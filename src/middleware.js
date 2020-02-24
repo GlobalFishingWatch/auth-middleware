@@ -106,8 +106,8 @@ function checkPermissionsKoaMiddleware(permissions) {
 }
 function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
   return async (ctx, next) => {
-    const id = ctx.state.user.id;
-    const type = ctx.state.user.type;
+    const id = ctx.state.user ? ctx.state.user.id : 'anonymous';
+    const type = ctx.state.user ? ctx.state.user.type : 'user';
     const gatewayURL = getGatewayURLKoa(ctx);
     const newPerm = permissions.map(p => {
       if (p.valueParam) {
