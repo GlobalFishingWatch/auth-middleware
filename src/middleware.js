@@ -16,16 +16,19 @@ function getGatewayURLKoa(ctx) {
 async function request(ctx, options) {
   const baseUrl = getGatewayURLKoa(ctx);
   const uri = `${baseUrl}${options.uri}`;
-  try {
-    return await rp({
+  const options = {
       ...options,
       headers: {
         ...options.headers,
         Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
       },
       uri
-    });
+    };
+  try {
+    return await rp(options);
   } catch (err) {
+    console.log('Options in request', options)
+    console.error('ERror in request', err);
     if (err.statusCode === 404) {
       throw new NotFoundException('dataset not found');
     } else if (err.statusCode === 401) {
