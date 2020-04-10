@@ -26,12 +26,9 @@ function checkExistPermissionInList(permissions, { action, type, value }) {
 }
 
 function checkSomePermissionsInList(userPermissions, permissionsToCheck) {
-  console.log('userPerm', JSON.stringify(userPermissions));
-  console.log('permissionsToCheck', JSON.stringify(permissionsToCheck));
   const exists = permissionsToCheck.findIndex((p) =>
     checkExistPermissionInList(userPermissions, p)
   );
-  console.log('Result', exists);
   if (exists === -1) {
     throw new ForbiddenException('Not authorized');
   }
