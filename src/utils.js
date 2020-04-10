@@ -5,16 +5,16 @@ function checkExistPermissionInList(permissions, { action, type, value }) {
     if (p.action !== action || p.type !== type) {
       return false;
     }
-    if (value.trim().endsWith('*') && value.trim().startsWith('*')) {
-      if (!p.value.includes(value.replace(/\*/g, ''))) {
+    if (p.value.trim().endsWith('*') && p.value.trim().startsWith('*')) {
+      if (!value.includes(p.value.replace(/\*/g, ''))) {
         return false;
       }
-    } else if (value.trim().endsWith('*')) {
-      if (!p.value.startsWith(value.replace(/\*/g, ''))) {
+    } else if (p.value.trim().endsWith('*')) {
+      if (!value.startsWith(p.value.replace(/\*/g, ''))) {
         return false;
       }
-    } else if (value.trim().startsWith('*')) {
-      if (!p.value.endsWith(value.replace(/\*/g, ''))) {
+    } else if (p.value.trim().startsWith('*')) {
+      if (!value.endsWith(p.value.replace(/\*/g, ''))) {
         return false;
       }
     } else if (value !== p.value) {
