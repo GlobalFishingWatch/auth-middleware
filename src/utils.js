@@ -1,3 +1,5 @@
+const { ForbiddenException } = require('./http.error');
+
 function checkExistPermissionInList(permissions, { action, type, value }) {
   return permissions.some((p) => {
     if (p.action !== action || p.type !== type) {
