@@ -9,6 +9,11 @@ const {
 } = require('./http.error');
 const rp = require('request-promise');
 
+const {
+  checkSomePermissionsInList,
+  checkExistPermissionInList,
+} = require('./utils');
+
 function getGatewayURLKoa(ctx) {
   return ctx.request.headers['x-gateway-url'];
 }
@@ -106,39 +111,6 @@ function getPermissionsOfHeader(ctx) {
   }
 }
 
-function checkPermissionsWithHeader(userPermissions, permissionsToCheck) {
-  const exists = permissionsToCheck.findIndex((p) =>
-    userPermissions.find((userPerm) => {
-      if (p.action !== userPerm.action || p.type !== userPerm.type) {
-        return false;
-      }
-      if (
-        userPerm.value.trim().endsWith('*') &&
-        userPerm.value.trim().startsWith('*')
-      ) {
-        if (!p.value.includes(userPerm.value.replace(/\*/g, ''))) {
-          return false;
-        }
-      } else if (userPerm.value.trim().endsWith('*')) {
-        if (!p.value.startsWith(userPerm.value.replace(/\*/g, ''))) {
-          return false;
-        }
-      } else if (userPerm.value.trim().startsWith('*')) {
-        if (!p.value.endsWith(userPerm.value.replace(/\*/g, ''))) {
-          return false;
-        }
-      } else if (userPerm.value !== p.value) {
-        return false;
-      }
-
-      return true;
-    })
-  );
-  if (exists === -1) {
-    throw new ForbiddenException('Not authorized');
-  }
-}
-
 function checkPermissionsKoaMiddleware(permissionsToCheck) {
   return async (ctx, next) => {
     const id = ctx.state.user ? ctx.state.user.id : 'anonymous';
@@ -148,7 +120,7 @@ function checkPermissionsKoaMiddleware(permissionsToCheck) {
     if (!permissionsOfUser) {
       await checkPermissions(gatewayURL, type, id, permissionsToCheck);
     } else {
-      checkPermissionsWithHeader(permissionsOfUser, permissionsToCheck);
+      checkSomePermissionsInList(permissionsOfUser, permissionsToCheck);
     }
     await next();
   };
@@ -168,7 +140,7 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
     if (!permissionsOfUser) {
       await checkPermissions(gatewayURL, type, id, newPerm);
     } else {
-      checkPermissionsWithHeader(permissionsOfUser, newPerm);
+      checkSomePermissionsInList(permissionsOfUser, newPerm);
     }
     await next();
   };
@@ -245,5 +217,8 @@ module.exports = {
     UnauthorizedException,
     InternalServerException,
   },
-  utils: require('./utils'),
+  utils: {
+    checkExistPermissionInList,
+    checkSomePermissionsInList,
+  },
 };
