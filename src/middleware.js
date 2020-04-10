@@ -140,7 +140,12 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
     if (!permissionsOfUser) {
       await checkPermissions(gatewayURL, type, id, newPerm);
     } else {
-      checkSomePermissionsInList(permissionsOfUser, newPerm);
+      try {
+        checkSomePermissionsInList(permissionsOfUser, newPerm);
+      } catch (err) {
+        console.error('Errooooorr', err);
+        throw err;
+      }
     }
     await next();
   };

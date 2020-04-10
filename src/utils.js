@@ -31,6 +31,7 @@ function checkSomePermissionsInList(userPermissions, permissionsToCheck) {
   const exists = permissionsToCheck.findIndex((p) =>
     checkExistPermissionInList(userPermissions, p)
   );
+  console.log('Result', exists);
   if (exists === -1) {
     throw new ForbiddenException('Not authorized');
   }
