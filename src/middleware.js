@@ -5,9 +5,14 @@ const {
   NotFoundException,
   ForbiddenException,
   UnauthorizedException,
-  InternalServerException
+  InternalServerException,
 } = require('./http.error');
 const rp = require('request-promise');
+
+const {
+  checkSomePermissionsInList,
+  checkExistPermissionInList,
+} = require('./utils');
 
 function getGatewayURLKoa(ctx) {
   return ctx.request.headers['x-gateway-url'];
@@ -21,9 +26,9 @@ async function request(ctx, options) {
       ...options,
       headers: {
         ...options.headers,
-        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
+        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
       },
-      uri
+      uri,
     });
   } catch (err) {
     if (err.statusCode === 404) {
@@ -47,9 +52,9 @@ async function checkPermissions(gatewayURL, type, id, permissions) {
       const options = {
         uri: url,
         headers: {
-          Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
+          Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
         },
-        json: true
+        json: true,
       };
       await rp(options);
       has = true;
@@ -68,9 +73,9 @@ async function getPermissions(gatewayURL, type, id) {
     const options = {
       uri: url,
       headers: {
-        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
+        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
       },
-      json: true
+      json: true,
     };
     const permissions = await rp(options);
     return permissions;
@@ -84,9 +89,9 @@ async function getPermissionsAnonymous(gatewayURL, type, id) {
     const options = {
       uri: url,
       headers: {
-        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`
+        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
       },
-      json: true
+      json: true,
     };
     const permissions = await rp(options);
     return permissions;
@@ -95,12 +100,28 @@ async function getPermissionsAnonymous(gatewayURL, type, id) {
   }
 }
 
-function checkPermissionsKoaMiddleware(permissions) {
+function getPermissionsOfHeader(ctx) {
+  if (!ctx.headers.permissions) {
+    return null;
+  }
+  try {
+    return JSON.parse(ctx.headers.permissions);
+  } catch (err) {
+    return null;
+  }
+}
+
+function checkPermissionsKoaMiddleware(permissionsToCheck) {
   return async (ctx, next) => {
     const id = ctx.state.user ? ctx.state.user.id : 'anonymous';
     const type = ctx.state.user ? ctx.state.user.type : 'user';
     const gatewayURL = getGatewayURLKoa(ctx);
-    await checkPermissions(gatewayURL, type, id, permissions);
+    const permissionsOfUser = getPermissionsOfHeader(ctx);
+    if (!permissionsOfUser) {
+      await checkPermissions(gatewayURL, type, id, permissionsToCheck);
+    } else {
+      checkSomePermissionsInList(permissionsOfUser, permissionsToCheck);
+    }
     await next();
   };
 }
@@ -109,29 +130,39 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
     const id = ctx.state.user ? ctx.state.user.id : 'anonymous';
     const type = ctx.state.user ? ctx.state.user.type : 'user';
     const gatewayURL = getGatewayURLKoa(ctx);
-    const newPerm = permissions.map(p => {
+    const newPerm = permissions.map((p) => {
       if (p.valueParam) {
         return { ...p, value: ctx.params[p.valueParam] };
       }
       return { ...p };
     });
-    await checkPermissions(gatewayURL, type, id, newPerm);
+    const permissionsOfUser = getPermissionsOfHeader(ctx);
+    if (!permissionsOfUser) {
+      await checkPermissions(gatewayURL, type, id, newPerm);
+    } else {
+      checkSomePermissionsInList(permissionsOfUser, newPerm);
+    }
     await next();
   };
 }
 
 function obtainPermissionsKoaMiddleware() {
   return async (ctx, next) => {
-    let id, type;
-    const gatewayURL = getGatewayURLKoa(ctx);
-    if (ctx.state.user) {
-      id = ctx.state.user.id;
-      type = ctx.state.user.type;
-      const permissions = await getPermissions(gatewayURL, type, id);
-      ctx.state.permissions = permissions;
+    const permissionsOfUser = getPermissionsOfHeader(ctx);
+    if (permissionsOfUser) {
+      ctx.state.permissions = permissionsOfUser;
     } else {
-      const permissions = await getPermissionsAnonymous(gatewayURL);
-      ctx.state.permissions = permissions;
+      let id, type;
+      const gatewayURL = getGatewayURLKoa(ctx);
+      if (ctx.state.user) {
+        id = ctx.state.user.id;
+        type = ctx.state.user.type;
+        const permissions = await getPermissions(gatewayURL, type, id);
+        ctx.state.permissions = permissions;
+      } else {
+        const permissions = await getPermissionsAnonymous(gatewayURL);
+        ctx.state.permissions = permissions;
+      }
     }
 
     await next();
@@ -175,7 +206,7 @@ module.exports = {
     obtainUser: obtainUserKoaMiddleware,
     checkPermissions: checkPermissionsKoaMiddleware,
     obtainPermissions: obtainPermissionsKoaMiddleware,
-    checkPermissionsWithRequestParams: checkPermissionsWithRequestParamsKoaMiddleware
+    checkPermissionsWithRequestParams: checkPermissionsWithRequestParamsKoaMiddleware,
   },
   errors: {
     HttpException,
@@ -184,7 +215,10 @@ module.exports = {
     NotFoundException,
     ForbiddenException,
     UnauthorizedException,
-    InternalServerException
+    InternalServerException,
   },
-  utils: require('./utils')
+  utils: {
+    checkExistPermissionInList,
+    checkSomePermissionsInList,
+  },
 };
