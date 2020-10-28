@@ -27,6 +27,7 @@ async function request(ctx, options) {
       headers: {
         ...options.headers,
         Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
+        'transaction-id': ctx.request.headers['transaction-id'] ? ctx.request.headers['transaction-id'] : undefined,
       },
       uri,
     });
