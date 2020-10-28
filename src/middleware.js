@@ -132,10 +132,16 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
     const type = ctx.state.user ? ctx.state.user.type : 'user';
     const gatewayURL = getGatewayURLKoa(ctx);
     const newPerm = permissions.map((p) => {
+      const permission = { ...p };
       if (p.valueParam) {
-        return { ...p, value: ctx.params[p.valueParam] };
+        permission.value = ctx.params[p.valueParam];
       }
-      return { ...p };
+      if (p.valueQueryParam) {
+        permission.value = ctx.query[p.valueQueryParam]
+          ? ctx.query[p.valueQueryParam].split(',')
+          : [];
+      }
+      return permission;
     });
     const permissionsOfUser = getPermissionsOfHeader(ctx);
     if (!permissionsOfUser) {
