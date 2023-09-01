@@ -7,7 +7,7 @@ const {
   UnauthorizedException,
   InternalServerException,
 } = require('./http.error');
-const rp = require('request-promise');
+const axios = require('axios');
 
 const {
   checkSomePermissionsInList,
@@ -20,23 +20,30 @@ function getGatewayURLKoa(ctx) {
 
 async function request(ctx, options) {
   const baseUrl = getGatewayURLKoa(ctx);
-  const uri = `${baseUrl}${options.uri}`;
+  const url = `${baseUrl}${options.uri}`;
+  if (options.json) {
+    delete options.json;
+    options.responseType = 'json';
+  }
   try {
-    return await rp({
+    const response = await axios({
       ...options,
       headers: {
         ...options.headers,
         Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
-        'transaction-id': ctx.request.headers['transaction-id'] ? ctx.request.headers['transaction-id'] : undefined,
+        'transaction-id': ctx.request.headers['transaction-id']
+          ? ctx.request.headers['transaction-id']
+          : undefined,
       },
-      uri,
+      url,
     });
+    return response.data;
   } catch (err) {
-    if (err.statusCode === 404) {
+    if (err.code === 404) {
       throw new NotFoundException('dataset not found');
-    } else if (err.statusCode === 401) {
+    } else if (err.code === 401) {
       throw new UnauthorizedException('Not authenticated');
-    } else if (err.statusCode === 403) {
+    } else if (err.code === 403) {
       throw new ForbiddenException('Not authorized');
     }
 
@@ -213,7 +220,8 @@ module.exports = {
     obtainUser: obtainUserKoaMiddleware,
     checkPermissions: checkPermissionsKoaMiddleware,
     obtainPermissions: obtainPermissionsKoaMiddleware,
-    checkPermissionsWithRequestParams: checkPermissionsWithRequestParamsKoaMiddleware,
+    checkPermissionsWithRequestParams:
+      checkPermissionsWithRequestParamsKoaMiddleware,
   },
   errors: {
     HttpException,
