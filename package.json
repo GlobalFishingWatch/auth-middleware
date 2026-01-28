@@ -1,10 +1,41 @@
 {
-  "name": "auth-middleware",
+  "name": "@globalfishingwatch/auth-middleware",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./http.error": {
+      "types": "./dist/src/http.error.d.ts",
+      "import": "./dist/src/http.error.js",
+      "default": "./dist/src/http.error.js"
+    },
+    "./middleware": {
+      "types": "./dist/src/middleware.d.ts",
+      "import": "./dist/src/middleware.js",
+      "default": "./dist/src/middleware.js"
+    },
+    "./utils": {
+      "types": "./dist/src/utils.d.ts",
+      "import": "./dist/src/utils.js",
+      "default": "./dist/src/utils.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
   },
   "repository": {
     "type": "git",

@@ -1,4 +1,4 @@
-const {
+import {
   HttpException,
   BadRequestException,
   UnprocessableEntityException,
@@ -6,44 +6,73 @@ const {
   ForbiddenException,
   UnauthorizedException,
   InternalServerException,
-} = require('./http.error');
-const axios = require('axios');
-
-const {
+} from './http.error.js';
+import axios, { AxiosRequestConfig } from 'axios';
+import {
   checkSomePermissionsInList,
   checkExistPermissionInList,
-} = require('./utils');
+} from './utils.js';
+import type { Permission } from './utils.js';
 
-function getGatewayURLKoa(ctx) {
-  return ctx.request.headers['x-gateway-url'];
+export interface KoaContext {
+  state: {
+    user?: { id: string; type: string };
+    permissions?: Permission[];
+  };
+  request: {
+    headers: Record<string, string | undefined>;
+    path?: string;
+    header: Record<string, string | undefined>;
+  };
+  headers: Record<string, string | undefined>;
+  body?: unknown;
+  status?: number;
+  params: Record<string, string>;
+  query: Record<string, string | undefined>;
+  throw(status: number, message: string): never;
 }
 
-async function request(ctx, options) {
+export interface RequestOptions {
+  uri: string;
+  headers?: Record<string, string>;
+  json?: boolean;
+  [key: string]: unknown;
+}
+
+function getGatewayURLKoa(ctx: KoaContext): string {
+  return ctx.request.headers['x-gateway-url'] ?? '';
+}
+
+export async function request<T = unknown>(
+  ctx: KoaContext,
+  options: RequestOptions
+): Promise<T> {
   const baseUrl = getGatewayURLKoa(ctx);
   const url = `${baseUrl}${options.uri}`;
+  const config: AxiosRequestConfig = { ...options };
   if (options.json) {
-    delete options.json;
-    options.responseType = 'json';
+    delete (config as RequestOptions).json;
+    config.responseType = 'json';
   }
   try {
     const response = await axios({
-      ...options,
+      ...config,
       headers: {
         ...options.headers,
         Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
-        'transaction-id': ctx.request.headers['transaction-id']
-          ? ctx.request.headers['transaction-id']
-          : undefined,
+        'transaction-id': ctx.request.headers['transaction-id'] ?? undefined,
       },
       url,
     });
-    return response.data;
-  } catch (err) {
-    if (err.code === 404) {
+    return response.data as T;
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status: number } };
+    const code = axiosErr.response?.status;
+    if (code === 404) {
       throw new NotFoundException('dataset not found');
-    } else if (err.code === 401) {
+    } else if (code === 401) {
       throw new UnauthorizedException('Not authenticated');
-    } else if (err.code === 403) {
+    } else if (code === 403) {
       throw new ForbiddenException('Not authorized');
     }
 
@@ -51,23 +80,33 @@ async function request(ctx, options) {
   }
 }
 
-async function checkPermissions(gatewayURL, type, id, permissions) {
+async function checkPermissions(
+  gatewayURL: string,
+  type: string,
+  id: string,
+  permissions: Permission[]
+): Promise<void> {
   let has = false;
   for (let i = 0; i < permissions.length; i++) {
     try {
       const permission = permissions[i];
-      const url = `${gatewayURL}/auth/acl/${type}/${id}/has/${permission.action}/${permission.type}/${permission.value}`;
-      const options = {
-        uri: url,
+      const valueStr = Array.isArray(permission.value)
+        ? permission.value[0]
+        : permission.value;
+      const url = `${gatewayURL}/auth/acl/${type}/${id}/has/${permission.action}/${permission.type}/${valueStr}`;
+      await axios({
+        method: 'get',
+        url,
         headers: {
           Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
         },
-        json: true,
-      };
-      await rp(options);
+        responseType: 'json',
+      });
       has = true;
       break;
-    } catch (err) {}
+    } catch {
+      // continue to next permission
+    }
   }
 
   if (!has) {
@@ -75,52 +114,59 @@ async function checkPermissions(gatewayURL, type, id, permissions) {
   }
 }
 
-async function getPermissions(gatewayURL, type, id) {
+async function getPermissions(
+  gatewayURL: string,
+  type: string,
+  id: string
+): Promise<Permission[]> {
   try {
     const url = `${gatewayURL}/auth/acl/permissions/${type}/${id}`;
-    const options = {
-      uri: url,
+    const response = await axios({
+      method: 'get',
+      url,
       headers: {
         Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
       },
-      json: true,
-    };
-    const permissions = await rp(options);
-    return permissions;
-  } catch (err) {
-    throw new ForbiddenException('Not authorized');
-  }
-}
-async function getPermissionsAnonymous(gatewayURL, type, id) {
-  try {
-    const url = `${gatewayURL}/auth/acl/permissions/anonymous`;
-    const options = {
-      uri: url,
-      headers: {
-        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
-      },
-      json: true,
-    };
-    const permissions = await rp(options);
-    return permissions;
-  } catch (err) {
+      responseType: 'json',
+    });
+    return response.data as Permission[];
+  } catch {
     throw new ForbiddenException('Not authorized');
   }
 }
 
-function getPermissionsOfHeader(ctx) {
+async function getPermissionsAnonymous(
+  gatewayURL: string
+): Promise<Permission[]> {
+  try {
+    const url = `${gatewayURL}/auth/acl/permissions/anonymous`;
+    const response = await axios({
+      method: 'get',
+      url,
+      headers: {
+        Authorization: `Bearer ${process.env.GFW_APP_TOKEN}`,
+      },
+      responseType: 'json',
+    });
+    return response.data as Permission[];
+  } catch {
+    throw new ForbiddenException('Not authorized');
+  }
+}
+
+function getPermissionsOfHeader(ctx: KoaContext): Permission[] | null {
   if (!ctx.headers.permissions) {
     return null;
   }
   try {
-    return JSON.parse(ctx.headers.permissions);
-  } catch (err) {
+    return JSON.parse(ctx.headers.permissions) as Permission[];
+  } catch {
     return null;
   }
 }
 
-function checkPermissionsKoaMiddleware(permissionsToCheck) {
-  return async (ctx, next) => {
+export function checkPermissionsKoaMiddleware(permissionsToCheck: Permission[]) {
+  return async (ctx: KoaContext, next: () => Promise<void>): Promise<void> => {
     const id = ctx.state.user ? ctx.state.user.id : 'anonymous';
     const type = ctx.state.user ? ctx.state.user.type : 'user';
     const gatewayURL = getGatewayURLKoa(ctx);
@@ -133,20 +179,27 @@ function checkPermissionsKoaMiddleware(permissionsToCheck) {
     await next();
   };
 }
-function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
-  return async (ctx, next) => {
+
+export interface PermissionWithParams extends Permission {
+  valueParam?: string;
+  valueQueryParam?: string;
+}
+
+export function checkPermissionsWithRequestParamsKoaMiddleware(
+  permissions: PermissionWithParams[]
+) {
+  return async (ctx: KoaContext, next: () => Promise<void>): Promise<void> => {
     const id = ctx.state.user ? ctx.state.user.id : 'anonymous';
     const type = ctx.state.user ? ctx.state.user.type : 'user';
     const gatewayURL = getGatewayURLKoa(ctx);
-    const newPerm = permissions.map((p) => {
-      const permission = { ...p };
+    const newPerm: Permission[] = permissions.map((p) => {
+      const permission: Permission = { ...p };
       if (p.valueParam) {
         permission.value = ctx.params[p.valueParam];
       }
       if (p.valueQueryParam) {
-        permission.value = ctx.query[p.valueQueryParam]
-          ? ctx.query[p.valueQueryParam].split(',')
-          : [];
+        const q = ctx.query[p.valueQueryParam];
+        permission.value = q ? q.split(',') : [];
       }
       return permission;
     });
@@ -160,17 +213,16 @@ function checkPermissionsWithRequestParamsKoaMiddleware(permissions) {
   };
 }
 
-function obtainPermissionsKoaMiddleware() {
-  return async (ctx, next) => {
+export function obtainPermissionsKoaMiddleware() {
+  return async (ctx: KoaContext, next: () => Promise<void>): Promise<void> => {
     const permissionsOfUser = getPermissionsOfHeader(ctx);
     if (permissionsOfUser) {
       ctx.state.permissions = permissionsOfUser;
     } else {
-      let id, type;
       const gatewayURL = getGatewayURLKoa(ctx);
       if (ctx.state.user) {
-        id = ctx.state.user.id;
-        type = ctx.state.user.type;
+        const id = ctx.state.user.id;
+        const type = ctx.state.user.type;
         const permissions = await getPermissions(gatewayURL, type, id);
         ctx.state.permissions = permissions;
       } else {
@@ -183,11 +235,14 @@ function obtainPermissionsKoaMiddleware() {
   };
 }
 
-function obtainUserKoaMiddleware(required = true) {
-  return async (ctx, next) => {
+export function obtainUserKoaMiddleware(required = true) {
+  return async (ctx: KoaContext, next: () => Promise<void>): Promise<void> => {
     try {
-      ctx.state.user = JSON.parse(ctx.request.header.user);
-    } catch (err) {
+      const userHeader = ctx.request.header.user;
+      ctx.state.user = userHeader
+        ? (JSON.parse(userHeader) as { id: string; type: string })
+        : undefined;
+    } catch {
       if (required) {
         throw new UnauthorizedException('Not authorized');
       }
@@ -196,8 +251,8 @@ function obtainUserKoaMiddleware(required = true) {
   };
 }
 
-function healthKoa(checkFn = async () => {}) {
-  return async (ctx, next) => {
+export function healthKoa(checkFn: () => Promise<void> = async () => {}) {
+  return async (ctx: KoaContext, next: () => Promise<void>): Promise<void> => {
     if (ctx.request.path === '/health') {
       try {
         await checkFn();
@@ -213,7 +268,7 @@ function healthKoa(checkFn = async () => {}) {
   };
 }
 
-module.exports = {
+export default {
   koa: {
     request,
     health: healthKoa,
